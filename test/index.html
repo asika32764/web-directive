@@ -6,7 +6,9 @@
 </head>
 <body>
   <div>
-    <div w-foo></div>
+    <button w-copy="Text to copy">
+      Copy
+    </button>
   </div>
 
   <script type="module">
@@ -15,12 +17,19 @@
     const wd = new WebDirective();
     wd.listen(document.body);
     
-    wd.register('foo', {
+    wd.register('copy', {
       mounted(el, bindings) {
-        console.log(el, bindings);
+        console.log('mounted', el, bindings);
+        const { value } = bindings;
+        el.addEventListener('click', el._copyHandler = () => {
+          navigator.clipboard.writeText(value);
+        });
       },
       unmounted(el) {
-        console.log('un', el);
+        console.log('unmounted', el);
+        el.removeListener('click', el._copyHandler);
+
+        delete el._copyHandler;
       }
     })
   </script>
