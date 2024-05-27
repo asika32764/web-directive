@@ -134,3 +134,7 @@ const wd = new WebDirective({
   prefix: 'x-'
 });
 ```
+
+## Todo
+
+- Support modifier and arguments like: `w-foo.bar:yoo`
