@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Web Directive Test</title>
+</head>
+<body>
+  <div>
+    <div w-foo></div>
+  </div>
+
+  <script type="module">
+    import WebDirective from '../dist/web-directive.es.js';
+
+    const wd = new WebDirective();
+    wd.listen(document.body);
+    
+    wd.register('foo', {
+      mounted(el, bindings) {
+        console.log(el, bindings);
+      },
+      unmounted(el) {
+        console.log('un', el);
+      }
+    })
+  </script>
+</body>
+</html>
