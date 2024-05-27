@@ -10,6 +10,11 @@
     "name": "Simon Asika",
     "email": "asika32764@gmail.com"
   },
+  "homepage": "https://github.com/asika32764/web-directive",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/asika32764/web-directive"
+  },
   "license": "MIT",
   "scripts": {
     "build:prod": "cross-env NODE_ENV=production rollup -c",
