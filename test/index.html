@@ -16,6 +16,8 @@
 
     const wd = new WebDirective();
     wd.listen(document.body);
+
+    document.querySelector<HTMLElement>().innerText
     
     wd.register('copy', {
       mounted(el, bindings) {

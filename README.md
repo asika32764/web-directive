@@ -3,6 +3,8 @@
 A library to implement directive functions for native HTML without any framework, 
 which is inspired by Vue.js.
 
+See [DEMO](https://codepen.io/asika32764/pen/RwmoWWa)
+
 ```html
 <button w-copy="Text to copy">
   ...
@@ -59,6 +61,14 @@ Browser
   const wd = new WebDirective();
   wd.listen();
 </script>
+```
+
+UnPkg
+
+```html
+<script src="https://www.unpkg.com/web-directive/dist/web-directive.umd.min.js"></script>
+
+<script type="module" src="https://www.unpkg.com/web-directive/dist/web-directive.es.min.js"></script>
 ```
 
 Listen to smaller scope.
