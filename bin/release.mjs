@@ -35,7 +35,7 @@ try {
 console.log(`>>> npm version ${args.join(' ')}`);
 exec(`npm version ${args.join(' ')}`);
 
-const branch = cliInput['b'] || 'master';
+const branch = cliInput['b'] || 'main';
 
 console.log('>>> Push to git');
 
