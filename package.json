@@ -1,6 +1,6 @@
 {
   "name": "web-directive",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "main": "dist/web-directive.cjs",
   "browser": "dist/web-directive.umd.js",
   "module": "dist/web-directive.es.js",
