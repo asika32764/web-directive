@@ -31,12 +31,22 @@ See [DEMO](https://codepen.io/asika32764/pen/RwmoWWa)
 
 ## Installation
 
+NPM or Yarn
+
 ```shell
 npm i web-directive
 
 # OR
 
 yarn add web-directive
+```
+
+UnPkg
+
+```html
+<script src="https://www.unpkg.com/web-directive/dist/web-directive.umd.min.js"></script>
+
+<script type="module" src="https://www.unpkg.com/web-directive/dist/web-directive.es.min.js"></script>
 ```
 
 ### Getting Started
@@ -63,14 +73,6 @@ Browser
 </script>
 ```
 
-UnPkg
-
-```html
-<script src="https://www.unpkg.com/web-directive/dist/web-directive.umd.min.js"></script>
-
-<script type="module" src="https://www.unpkg.com/web-directive/dist/web-directive.es.min.js"></script>
-```
-
 Listen to smaller scope.
 
 ```ts
@@ -86,6 +88,11 @@ wd.disconnect();
 ```
 
 ### Register Directives
+
+After register a directive (for example: `foo`), you can add `w-foo` directive to any HTML element and the directive will instantly work.
+
+This is very useful that if you want to add some cross-platform custom logic to existing Vue/React/Angular template without writing code for every frameworks.
+
 
 ```ts
 wd.register('foo', {
@@ -113,6 +120,16 @@ wd.register('foo', {
   }
 });
 ```
+
+Now, add `w-foo` to HTML, it will run the `mounted()` hook:
+
+```ts
+const ele = document.querySelector('...');
+
+ele.setAttribute('w-foo', '{ "options": ...}');
+```
+
+-----
 
 The `bindings` interface:
 
