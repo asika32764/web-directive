@@ -216,6 +216,8 @@ class WebDirective {
         }
 
         for (const directiveWithArgs of this.findDirectivesFromNode(mutation.target as Element)) {
+          // Todo: mutation removes triggered because beforeEach reset DOM, we must disconnect observer in unmounted hook
+          console.log(mutation.target, mutation.type, Array.from(mutation.addedNodes), Array.from(mutation.removedNodes));
           // Attributes
           if (mutation.type === 'attributes' || mutation.type === 'childList') {
             this.runDirectiveIfExists(directiveWithArgs, mutation.target as HTMLElement, 'updated', mutation);
