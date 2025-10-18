@@ -92,6 +92,8 @@ describe('Simple Attributes Tests', () => {
     await nextTick();
 
     document.querySelector('[w-foo]')!.removeAttribute('w-foo');
+
+    await nextTick();
   });
 
   it('Add element with attribute in children / value changed / removed', async () => {
@@ -131,6 +133,43 @@ describe('Simple Attributes Tests', () => {
     await nextTick();
 
     document.querySelector('[w-foo]')!.removeAttribute('w-foo');
+  });
+
+  it('Add attribute to root element / value changed / removed', async () => {
+    expect.hasAssertions();
+
+    wd.listen();
+
+    wd.register('foo', {
+      mounted: (el, bindings) => {
+        expect(el.nodeName).toBe('BODY');
+        expect(bindings.value).toBe('FOOOOOO');
+        expect(bindings.mutation).not.toBeUndefined();
+      },
+      updated: (el, bindings) => {
+        expect(el.nodeName).toBe('BODY');
+        expect(bindings.value).toBe('FOOOOOO2');
+        expect(bindings.oldValue).toBe('FOOOOOO');
+        expect(bindings.mutation).not.toBeUndefined();
+        expect(el.getAttribute('w-foo')).toBe('FOOOOOO2');
+      },
+      unmounted: (el, bindings) => {
+        expect(el.nodeName).toBe('BODY');
+        expect(el.classList.value).toBe('bar');
+        expect(bindings.mutation).not.toBeUndefined();
+        expect(el.getAttribute('w-foo')).toBeNull();
+      }
+    });
+
+    document.body.setAttribute('w-foo', 'FOOOOOO');
+
+    await nextTick();
+    //
+    // document.body.setAttribute('w-foo', 'FOOOOOO2');
+    //
+    // await nextTick();
+    //
+    // document.body.removeAttribute('w-foo');
   });
 
   it('Attributes value changed', () => {

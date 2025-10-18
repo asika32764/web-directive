@@ -14,7 +14,7 @@ describe('Simple Attributes Tests', () => {
     document.body.innerHTML = `
     <div id="app">
         <div class="main">
-            <button id="copy-button" w-copy.:foo.a.b="Hello">
+            <button id="copy-button" w-copy:foo.a.b="Hello">
                 Copy
             </button>
 
@@ -30,9 +30,11 @@ describe('Simple Attributes Tests', () => {
     expect.hasAssertions();
     wd.register('copy', {
       mounted: (el: Element, bindings) => {
-        console.log(bindings);
         const value = bindings.value;
-        expect(bindings.directive).toBe('w-copy');
+        expect(bindings.name).toBe('w-copy');
+        expect(bindings.directive).toBe('w-copy:foo.a.b');
+        expect(bindings.modifiers.a).toBeTruthy();
+        expect(bindings.modifiers.b).toBeTruthy();
         expect(bindings.mutation).toBeUndefined();
         expect(bindings.oldValue).toBeUndefined();
         expect(value).toBe('Hello');
@@ -42,58 +44,63 @@ describe('Simple Attributes Tests', () => {
     wd.listen();
   });
 
-  // it('Add attributes run instant after registered', () => {
-  //   expect.hasAssertions();
-  //   wd.listen();
-  //
-  //   wd.register('copy', {
-  //     mounted: (el: Element, bindings) => {
-  //       expect(bindings.directive).toBe('w-copy');
-  //       expect(bindings.mutation).toBeUndefined();
-  //       expect(bindings.oldValue).toBeUndefined();
-  //       expect(bindings.value).toBe('Hello');
-  //       expect(el.textContent?.trim()).toBe('Copy');
-  //     }
-  //   });
-  // });
-  //
-  // it('Add element with attribute / value changed / removed', async () => {
-  //   expect.hasAssertions();
-  //
-  //   wd.listen();
-  //
-  //   wd.register('foo', {
-  //     mounted: (el, bindings) => {
-  //       expect(el.nodeName).toBe('DIV');
-  //       expect(el.classList.value).toBe('foo');
-  //       expect(bindings.value).toBe('FOOOOOO');
-  //       expect(bindings.mutation).not.toBeUndefined();
-  //       expect(el.querySelector('span')!.textContent).toBe('BARRRR');
-  //     },
-  //     updated: (el, bindings) => {
-  //       expect(bindings.value).toBe('FOOOOOO2');
-  //       expect(bindings.mutation).not.toBeUndefined();
-  //       expect(bindings.oldValue).toBe('FOOOOOO');
-  //       expect(el.getAttribute('w-foo')).toBe('FOOOOOO2');
-  //     },
-  //     unmounted: (el, bindings) => {
-  //       expect(el.nodeName).toBe('DIV');
-  //       expect(el.classList.value).toBe('foo');
-  //       expect(bindings.mutation).not.toBeUndefined();
-  //       expect(el.getAttribute('w-foo')).toBeNull();
-  //     }
-  //   });
-  //
-  //   document.querySelector('.container')!.innerHTML = '<div class="foo" w-foo="FOOOOOO"> <span class="bar">BARRRR</span> </div>';
-  //
-  //   await nextTick();
-  //
-  //   document.querySelector('[w-foo]')!.setAttribute('w-foo', 'FOOOOOO2');
-  //
-  //   await nextTick();
-  //
-  //   document.querySelector('[w-foo]')!.removeAttribute('w-foo');
-  // });
+  it('Add attributes run instant after registered', () => {
+    expect.hasAssertions();
+    wd.listen();
+
+    wd.register('copy', {
+      mounted: (el: Element, bindings) => {
+        const value = bindings.value;
+        expect(bindings.name).toBe('w-copy');
+        expect(bindings.directive).toBe('w-copy:foo.a.b');
+        expect(bindings.modifiers.a).toBeTruthy();
+        expect(bindings.modifiers.b).toBeTruthy();
+        expect(bindings.mutation).toBeUndefined();
+        expect(bindings.oldValue).toBeUndefined();
+        expect(value).toBe('Hello');
+        expect(el.textContent?.trim()).toBe('Copy');
+      }
+    });
+  });
+
+  it('Add element with attribute / value changed / removed', async () => {
+    expect.hasAssertions();
+
+    wd.listen();
+    
+    const mounted: any[] = [];
+
+    wd.register('foo', {
+      mounted: (el, bindings) => {
+        mounted.push({ el, bindings });
+      },
+      // updated: (el, bindings) => {
+      //   expect(bindings.value).toBe('FOOOOOO2');
+      //   expect(bindings.mutation).not.toBeUndefined();
+      //   expect(bindings.oldValue).toBe('FOOOOOO');
+      //   expect(el.getAttribute('w-foo')).toBe('FOOOOOO2');
+      // },
+      // unmounted: (el, bindings) => {
+      //   expect(el.nodeName).toBe('DIV');
+      //   expect(el.classList.value).toBe('foo');
+      //   expect(bindings.mutation).not.toBeUndefined();
+      //   expect(el.getAttribute('w-foo')).toBeNull();
+      // }
+    });
+
+    document.querySelector('.container')!.innerHTML = '<div class="foo" w-foo:bar.a.b="FOOOOOO"> <span class="bar">BARRRR</span> </div>';
+
+    await nextTick();
+
+    document.querySelector('.foo')!.setAttribute('w-foo:bar.a.b', 'FOOOOOO2');
+    document.querySelector('.foo')!.setAttribute('w-foo:baz.b', 'FOOOOOO');
+
+    await nextTick();
+
+    document.querySelector('.foo')!.removeAttribute('w-foo');
+
+    console.log(mounted);
+  });
   //
   // it('Add element with attribute in children / value changed / removed', async () => {
   //   expect.hasAssertions();

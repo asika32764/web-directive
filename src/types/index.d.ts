@@ -9,10 +9,11 @@ export interface WebDirectiveOptions {
   prefix?: string;
 }
 
-export declare type WebDirectiveBaseHook = (directive: string, node: HTMLElement) => void;
+export declare type WebDirectiveBaseHook = (node: HTMLElement, bindings: WebDirectiveBinding) => void;
 
 export interface WebDirectiveBinding<T extends Element = HTMLElement> {
   directive: string;
+  name: string;
   node: T;
   value: any;
   oldValue: any;
