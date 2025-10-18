@@ -2,18 +2,18 @@ import type { WebDirectiveBaseHook, WebDirectiveHandler, WebDirectiveOptions } f
 
 const disconnectKey = '_webDirectiveDisconnectors';
 
-const defaultOptions: WebDirectiveOptions = {
+const defaultOptions: Required<WebDirectiveOptions> = {
   prefix: 'w-',
 };
 
 class WebDirective {
-  directives: Record<string, WebDirectiveHandler> = {};
+  directives: Record<string, WebDirectiveHandler<any>> = {};
 
   instances: Record<string, any[]> = {};
 
   listenTarget: HTMLElement = document.body;
 
-  options: WebDirectiveOptions;
+  options: Required<WebDirectiveOptions>;
 
   disconnectCallback?: (() => void);
 
@@ -54,11 +54,11 @@ class WebDirective {
     }
   };
 
-  constructor(options: Partial<WebDirectiveOptions> = {}) {
+  constructor(options: WebDirectiveOptions = {}) {
     this.options = Object.assign({}, defaultOptions, options);
   }
 
-  register(name: string, handler: WebDirectiveHandler) {
+  register<T extends Element = HTMLElement>(name: string, handler: WebDirectiveHandler<T>) {
     const directive = this.getDirectiveAttrName(name);
     this.directives[directive] = handler;
 
@@ -72,13 +72,17 @@ class WebDirective {
   }
 
   private mountDirectiveInitial(directive: string) {
+    const elements = Array.from(this.listenTarget.querySelectorAll<HTMLElement>('*'));
 
-    [].forEach.call(
-      this.listenTarget.querySelectorAll<HTMLElement>('[' + directive + ']'),
-      (el: HTMLElement) => {
-        this.runDirectiveIfExists(directive, el, 'mounted');
+    for (const element of elements) {
+      const attributes = element.getAttributeNames();
+
+      for (const attribute of attributes) {
+        if (attribute.startsWith(directive)) {
+          this.runDirectiveIfExists(attribute, element, 'mounted');
+        }
       }
-    );
+    }
   }
 
   remove(name: string) {
@@ -86,7 +90,9 @@ class WebDirective {
 
     if (this.instances[directive]) {
       this.instances[directive].forEach((node) => {
-        this.runDirectiveIfExists(directive, node, 'unmounted');
+        this.findDirectivesFromNode(node, directive).forEach((directiveWithArgs) => {
+          this.runDirectiveIfExists(directiveWithArgs, node, 'unmounted');
+        });
       });
 
       delete this.instances[directive];
@@ -108,26 +114,28 @@ class WebDirective {
       mutations.forEach((mutation) => {
         // Added Nodes
         [].forEach.call(mutation.addedNodes, (node: Node) => {
-          this.findDirectivesFromNode(node as Element).forEach((directive) => {
-            this.runDirectiveIfExists(directive, node as HTMLElement, 'mounted', mutation);
+          this.findDirectivesFromNode(node as Element).forEach((directiveWithArgs) => {
+            this.runDirectiveIfExists(directiveWithArgs, node as HTMLElement, 'mounted', mutation);
           });
 
           // Find children with all directives
-          for (const directive in this.directives) {
-            if ('querySelectorAll' in node) {
-              (node as HTMLElement).querySelectorAll<HTMLElement>(`[${directive}]`).forEach((node: HTMLElement) => {
-                this.runDirectiveIfExists(directive, node, 'mounted', mutation);
-              });
-            }
+          if ('querySelectorAll' in node) {
+            (node as HTMLElement).querySelectorAll<HTMLElement>(`*`).forEach((node: HTMLElement) => {
+              this.runDirectivesOfNode(node, 'mounted', mutation);
+            });
           }
         });
 
+        // Handle if attributes remove from node
         [].forEach.call(mutation.removedNodes, (node: Element) => {
-          this.findDirectivesFromNode(node).forEach((directive) => {
-            this.runDirectiveIfExists(directive, node as HTMLElement, 'unmounted', mutation);
-          });
+          this.runDirectivesOfNode(node as HTMLElement, 'mounted', mutation);
+
+          // this.findDirectivesFromNode(node).forEach((directiveWithArgs) => {
+          //   this.runDirectiveIfExists(directiveWithArgs, node as HTMLElement, 'unmounted', mutation);
+          // });
         });
 
+        // Handle attributes value changed
         if (mutation.type === 'attributes' && mutation.oldValue == null) {
           this.runDirectiveIfExists(mutation.attributeName!, mutation.target as HTMLElement, 'mounted', mutation);
         }
@@ -155,10 +163,10 @@ class WebDirective {
           this.runDirectiveIfExists(mutation.attributeName!, mutation.target as HTMLElement, 'unmounted', mutation);
         }
 
-        this.findDirectivesFromNode(mutation.target as Element).forEach((directive) => {
+        this.findDirectivesFromNode(mutation.target as Element).forEach((directiveWithArgs) => {
           // Attributes
           if (mutation.type === 'attributes' || mutation.type === 'childList') {
-            this.runDirectiveIfExists(directive, mutation.target as HTMLElement, 'updated', mutation);
+            this.runDirectiveIfExists(directiveWithArgs, mutation.target as HTMLElement, 'updated', mutation);
           }
         });
       });
@@ -204,12 +212,27 @@ class WebDirective {
     return this.directives[directive];
   }
 
+  private splitDirectiveArgs(directive: string) {
+    const [nameWithArg, ...modifierParts] = directive.split('.');
+    const [name, arg] = nameWithArg.split(':');
+
+    const modifiers: Record<string, boolean> = {};
+    modifierParts.forEach((mod) => {
+      modifiers[mod] = true;
+    });
+
+    return { name, arg: arg || null, modifiers };
+  }
+
   private runDirectiveIfExists(
     directive: string,
     node: HTMLElement,
     task: 'mounted' | 'unmounted' | 'updated',
     mutation: MutationRecord | undefined = undefined
   ) {
+    const { name, arg, modifiers } = this.splitDirectiveArgs(directive);
+    directive = name;
+
     const handler = this.getDirective(directive);
 
     if (handler && task in handler) {
@@ -223,7 +246,9 @@ class WebDirective {
         value: node.getAttribute(directive),
         oldValue: mutation?.oldValue,
         mutation,
-        dir: handler
+        handler,
+        arg,
+        modifiers
       });
 
       if (this.hooks?.[task]?.after) {
@@ -232,7 +257,18 @@ class WebDirective {
     }
   }
 
-  private findDirectivesFromNode(node: Element): string[] {
+  private runDirectivesOfNode(
+    node: HTMLElement,
+    task: 'mounted' | 'unmounted' | 'updated',
+    mutation?: MutationRecord,
+    directive?: string,
+  ) {
+    this.findDirectivesFromNode(node, directive).forEach((directiveWithArgs) => {
+      this.runDirectiveIfExists(directiveWithArgs, node, task, mutation);
+    });
+  }
+
+  private findDirectivesFromNode(node: Element, directive?: string): string[] {
     const directives: string[] = [];
 
     if (!node.getAttributeNames) {
@@ -241,7 +277,11 @@ class WebDirective {
 
     node.getAttributeNames().forEach((e) => {
       if (e.startsWith(this.getPrefix())) {
-        directives.push(e);
+        if (!directive) {
+          directives.push(e);
+        } else if (e.startsWith(directive)) {
+          directives.push(e);
+        }
       }
     });
 

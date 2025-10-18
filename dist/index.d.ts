@@ -1,38 +1,12 @@
-declare global {
-  interface Element {
-    _webDirectiveDisconnectors?: Record<string, Function>;
-  }
-}
-
-interface WebDirectiveOptions {
-  prefix?: string;
-}
-
-declare type WebDirectiveBaseHook = (directive: string, node: HTMLElement) => void;
-
-interface WebDirectiveBinding<T extends Element = HTMLElement> {
-  directive: string;
-  node: T;
-  value: any;
-  oldValue: any;
-  mutation?: MutationRecord;
-  dir: WebDirectiveHandler<T>;
-}
-
-type WebDirectiveHandlerHook<T extends Element = HTMLElement> = (node: T, bindings: WebDirectiveBinding) => void
-
-// Directive
-interface WebDirectiveHandler<T extends Element = HTMLElement> {
-  mounted?: WebDirectiveHandlerHook<T>;
-  unmounted?: WebDirectiveHandlerHook<T>;
-  updated?: WebDirectiveHandlerHook<T>;
-}
+import { WebDirectiveBaseHook } from './types';
+import { WebDirectiveHandler } from './types';
+import { WebDirectiveOptions } from './types';
 
 declare class WebDirective {
     directives: Record<string, WebDirectiveHandler>;
     instances: Record<string, any[]>;
     listenTarget: HTMLElement;
-    options: WebDirectiveOptions;
+    options: Required<WebDirectiveOptions>;
     disconnectCallback?: (() => void);
     hooks: {
         mounted: {
@@ -48,7 +22,7 @@ declare class WebDirective {
             after?: WebDirectiveBaseHook;
         };
     };
-    constructor(options?: Partial<WebDirectiveOptions>);
+    constructor(options?: WebDirectiveOptions);
     register(name: string, handler: WebDirectiveHandler): void;
     private mountDirectiveInitial;
     remove(name: string): void;
@@ -59,8 +33,10 @@ declare class WebDirective {
     listen(target?: HTMLElement): void;
     disconnect(): void;
     getDirective(directive: string): WebDirectiveHandler;
+    private splitDirectiveArgs;
     private runDirectiveIfExists;
     private findDirectivesFromNode;
 }
+export default WebDirective;
 
-export { WebDirective as default };
+export { }

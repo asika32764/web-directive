@@ -6,13 +6,13 @@
 </head>
 <body>
   <div>
-    <button w-copy="Text to copy">
+    <button w-copy:text.foo.bar="Text to copy">
       Copy
     </button>
   </div>
 
   <script type="module">
-    import WebDirective from '../dist/web-directive.js';
+    import WebDirective from './src/index.js';
 
     const wd = new WebDirective();
     wd.listen(document.body);

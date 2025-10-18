@@ -17,7 +17,9 @@ export interface WebDirectiveBinding<T extends Element = HTMLElement> {
   value: any;
   oldValue: any;
   mutation?: MutationRecord;
-  dir: WebDirectiveHandler<T>;
+  handler: WebDirectiveHandler<T>;
+  arg: string | null;
+  modifiers: Record<string, boolean>;
 }
 
 export type WebDirectiveHandlerHook<T extends Element = HTMLElement> = (node: T, bindings: WebDirectiveBinding) => void
