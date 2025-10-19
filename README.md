@@ -65,10 +65,9 @@ This works in static HTML, but it can fail with virtual DOM frameworks like Vue 
 rewrite the DOM tree and remove event bindings.
 
 ```vue
-
 <template>
   <App>
-    <!-- This button not work -->
+    <!-- This button not work in Vue -->
     <button class="js-copy-btn" data-text="Hello">
       Copy
     </button>
@@ -76,7 +75,17 @@ rewrite the DOM tree and remove event bindings.
 </template>
 ```
 
-To make small features reusable across projects and environments, a common solution is to use
+Also, if you dynamically change the DOM elements, you may break your event bindings.
+
+```ts
+toolbar.innerHTML = `<button class="js-copy-btn" data-text="Hello">
+      Copy
+    </button>`;
+
+document.body.appendChild(toolbar); // Not work, you must bind events again
+```
+
+To make small features reusable across projects and environments, or handle dynamic layouts, a common solution is to use
 `delegated event listeners`:
 
 ```ts
