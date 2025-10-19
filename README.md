@@ -27,7 +27,6 @@ See [DEMO](https://codepen.io/asika32764/pen/RwmoWWa)
 ```
 
 <!-- TOC -->
-
 * [Web Directive](#web-directive)
   * [Why Need This?](#why-need-this)
   * [Installation](#installation)
@@ -43,7 +42,6 @@ See [DEMO](https://codepen.io/asika32764/pen/RwmoWWa)
     * [Events](#events)
   * [Custom Prefix](#custom-prefix)
   * [Options](#options)
-
 <!-- TOC -->
 
 ## Why Need This?
@@ -87,13 +85,30 @@ $(document).on('click', '.js-copy-btn', (e) => {
 });
 ```
 
-This approach has some drawbacks. First, the `delegate` pattern is not commonly used; for developers unfamiliar with
-jQuery or similar libraries, this pattern can be confusing. Second, for SPAs that frequently need to unbind event
-handlers, this method can lead to memory leaks or unexpected behavior because the event handlers remain attached to the
-DOM even after the related elements have been removed.
+This approach has some drawbacks. First, the `delegate` pattern is not commonly used for developers unfamiliar with
+jQuery or similar libraries and may cause confused. Second, for SPAs that frequently need to unbind event
+handlers, this method can lead to memory leaks or unexpected behavior because the listeners remain attached to the
+DOM even after it have been removed.
 
-Another solution is implement a `WebComponent` such
-as `<copy-button>`, which ensures it works everywhere. However, Web Components have a higher development barrier: adding
+Another solution is implement a `CustomElement` such as `<copy-button>`, which ensures it works everywhere. 
+
+```html
+<script>
+  class CopyButton extends HTMLElement {
+    connectedCallback() {
+      this.addEventListener('click', this.copy);
+    }
+  }
+</script>
+
+<copy-button>
+  <button data-text="Hello World">
+    Copy Text
+  </button>
+</copy-button>
+```
+
+However, Web Components have a higher development barrier: adding
 a custom HTML element for a simple feature can feel heavy or unintuitive, and enabling Shadow DOM may make CSS harder to
 manage.
 
@@ -132,8 +147,10 @@ function copy(e: MouseEvent) {
 
 As an early experimental version, we heavily referenced Vue.js for the interface to reduce the learning curve for
 developers. However, due to some limitations of native HTML, we cannot achieve exactly the same behavior.
-Implementations of directives like this have been used in our team since 2020, it is very stable and intuitive,
-and perfectly suitable for production use.
+
+But so far, a simple plug-and-play, non-invasive, side-effect-free directive system is already very useful for building
+standalone widgets that work across environments and frameworks. Implementations of directives like this have been used
+in our team since 2020, it is very stable and intuitive, and perfectly suitable for production use.
 
 ## Installation
 
