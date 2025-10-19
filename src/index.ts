@@ -1,4 +1,5 @@
 import type { WebDirectiveBaseHook, WebDirectiveBinding, WebDirectiveHandler, WebDirectiveOptions } from './types';
+import { toCamelCase } from './utilities';
 
 export { singleton, nextTick, useCurrentContext, useEventListener } from './utilities';
 
@@ -322,7 +323,7 @@ class WebDirective {
 
     const modifiers: Record<string, boolean> = {};
     modifierParts.forEach((mod) => {
-      modifiers[mod] = true;
+      modifiers[toCamelCase(mod)] = true;
     });
 
     return { name, arg: arg || null, modifiers };

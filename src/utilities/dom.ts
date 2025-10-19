@@ -14,19 +14,25 @@ export function getDate(el: Element, name: string): any {
 const storageKey = `__webDirective.${createUid()}`;
 
 export function singleton<E extends Element, T = any>(el: E, name: string): T | undefined;
+export function singleton<E extends Element, T = any>(el: E, name: string, factory: false): T | undefined;
 export function singleton<E extends Element, T = any>(el: E, name: string, factory: (el: E) => T): T;
-export function singleton<E extends Element, T = any>(el: E, name: string, factory?: (el: E) => T): T | undefined {
-  // @ts-ignore
-  el[storageKey] ??= {};
+export function singleton<E extends Element, T = any>(el: E, name: string, factory?: ((el: E) => T) | false): T | undefined {
+  const element = el as any;
 
-  // @ts-ignore
-  if (!el[storageKey][name] && factory) {
-    // @ts-ignore
-    el[storageKey][name] = factory(el);
+  element[storageKey] ??= {};
+
+  if (factory === false) {
+    const instance = element[storageKey][name];
+
+    delete element[storageKey][name];
+    return instance;
   }
 
-  // @ts-ignore
-  return el[storageKey][name];
+  if (!element[storageKey][name] && factory) {
+    element[storageKey][name] = factory(el);
+  }
+
+  return element[storageKey][name];
 }
 
 function createUid() {

@@ -18,7 +18,7 @@ describe('Simple Attributes Tests', () => {
     document.body.innerHTML = `
     <div id="app">
         <div class="main">
-            <button id="copy-button" w-copy:foo.a.b="Hello">
+            <button id="copy-button" w-copy:foo-bar.sakura.sun-flower="Hello">
                 Copy
             </button>
 
@@ -36,9 +36,10 @@ describe('Simple Attributes Tests', () => {
       mounted: (el: Element, bindings) => {
         const value = bindings.value;
         expect(bindings.name).toBe('w-copy');
-        expect(bindings.directive).toBe('w-copy:foo.a.b');
-        expect(bindings.modifiers.a).toBeTruthy();
-        expect(bindings.modifiers.b).toBeTruthy();
+        expect(bindings.directive).toBe('w-copy:foo-bar.sakura.sun-flower');
+        expect(bindings.arg).toBe('foo-bar');
+        expect(bindings.modifiers.sakura).toBeTruthy();
+        expect(bindings.modifiers.sunFlower).toBeTruthy();
         expect(bindings.mutation).toBeUndefined();
         expect(bindings.oldValue).toBeUndefined();
         expect(value).toBe('Hello');
@@ -56,9 +57,10 @@ describe('Simple Attributes Tests', () => {
       mounted: (el: Element, bindings) => {
         const value = bindings.value;
         expect(bindings.name).toBe('w-copy');
-        expect(bindings.directive).toBe('w-copy:foo.a.b');
-        expect(bindings.modifiers.a).toBeTruthy();
-        expect(bindings.modifiers.b).toBeTruthy();
+        expect(bindings.directive).toBe('w-copy:foo-bar.sakura.sun-flower');
+        expect(bindings.arg).toBe('foo-bar');
+        expect(bindings.modifiers.sakura).toBeTruthy();
+        expect(bindings.modifiers.sunFlower).toBeTruthy();
         expect(bindings.mutation).toBeUndefined();
         expect(bindings.oldValue).toBeUndefined();
         expect(value).toBe('Hello');
