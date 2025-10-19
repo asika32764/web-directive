@@ -7,27 +7,30 @@ declare global {
 
 export interface WebDirectiveOptions {
   prefix?: string;
+  enableAttrParams?: boolean;
+  enableChildrenUpdated?: boolean;
 }
 
 export declare type WebDirectiveBaseHook = (node: HTMLElement, bindings: WebDirectiveBinding) => void;
 
-export interface WebDirectiveBinding<T extends Element = HTMLElement> {
+export interface WebDirectiveBinding<T extends Element = HTMLElement, M extends Record<string, boolean> = Record<string, boolean>> {
   directive: string;
   name: string;
   node: T;
   value: any;
   oldValue: any;
   mutation?: MutationRecord;
-  handler: WebDirectiveHandler<T>;
+  handler: WebDirectiveHandler<T, M>;
   arg: string | null;
-  modifiers: Record<string, boolean>;
+  modifiers: M;
 }
 
-export type WebDirectiveHandlerHook<T extends Element = HTMLElement> = (node: T, bindings: WebDirectiveBinding) => void
+export type WebDirectiveHandlerHook<T extends Element = HTMLElement, M extends Record<string, boolean> = Record<string, boolean>> = (node: T, bindings: WebDirectiveBinding<T, M>) => void
 
 // Directive
-export interface WebDirectiveHandler<T extends Element = HTMLElement> {
-  mounted?: WebDirectiveHandlerHook<T>;
-  unmounted?: WebDirectiveHandlerHook<T>;
-  updated?: WebDirectiveHandlerHook<T>;
+export interface WebDirectiveHandler<T extends Element = HTMLElement, M extends Record<string, boolean> = Record<string, boolean>> {
+  mounted?: WebDirectiveHandlerHook<T, M>;
+  unmounted?: WebDirectiveHandlerHook<T, M>;
+  updated?: WebDirectiveHandlerHook<T, M>;
+  childrenUpdated?: WebDirectiveHandlerHook<T, M>;
 }

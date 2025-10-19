@@ -10,6 +10,7 @@ Thumbs.db
 
 # Extra #
 !.gitkeep
+.yarn
 
 # Configuration #
 .env*

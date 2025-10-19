@@ -1,5 +1,6 @@
 import WebDirective from '../src';
-import { nextTick } from '../src/utilities/timing';
+import { WebDirectiveBinding } from '../src/types';
+import { nextTick } from '../src';
 
 let wd: WebDirective;
 
@@ -9,7 +10,10 @@ describe('Simple Attributes Tests', () => {
       wd.disconnect();
     }
 
-    wd = new WebDirective();
+    wd = new WebDirective({
+      enableAttrParams: true,
+      enableChildrenUpdated: true,
+    });
 
     document.body.innerHTML = `
     <div id="app">
@@ -63,29 +67,25 @@ describe('Simple Attributes Tests', () => {
     });
   });
 
-  it('Add element with attribute / value changed / removed', async () => {
+  it('Add element with multiple directives / value changed', async () => {
     expect.hasAssertions();
 
     wd.listen();
     
-    const mounted: any[] = [];
+    const mounted: Record<string, { el: Element, binding: WebDirectiveBinding<any> }> = {};
+    const updated: Record<string, { el: Element, binding: WebDirectiveBinding<any> }> = {};
 
-    wd.register('foo', {
-      mounted: (el, bindings) => {
-        mounted.push({ el, bindings });
+    wd.register<HTMLElement, { a?: boolean; b?: boolean; c?: boolean; }>('foo', {
+      mounted: (el, binding) => {
+        expect(binding.modifiers.a).toBeTruthy();
+        expect(binding.modifiers.b).toBeTruthy();
+        expect(binding.modifiers.c).toBeUndefined();
+
+        mounted[binding.directive] = { el, binding };
       },
-      // updated: (el, bindings) => {
-      //   expect(bindings.value).toBe('FOOOOOO2');
-      //   expect(bindings.mutation).not.toBeUndefined();
-      //   expect(bindings.oldValue).toBe('FOOOOOO');
-      //   expect(el.getAttribute('w-foo')).toBe('FOOOOOO2');
-      // },
-      // unmounted: (el, bindings) => {
-      //   expect(el.nodeName).toBe('DIV');
-      //   expect(el.classList.value).toBe('foo');
-      //   expect(bindings.mutation).not.toBeUndefined();
-      //   expect(el.getAttribute('w-foo')).toBeNull();
-      // }
+      updated: (el, binding) => {
+        updated[binding.directive] = { el, binding };
+      }
     });
 
     document.querySelector('.container')!.innerHTML = '<div class="foo" w-foo:bar.a.b="FOOOOOO"> <span class="bar">BARRRR</span> </div>';
@@ -97,63 +97,73 @@ describe('Simple Attributes Tests', () => {
 
     await nextTick();
 
-    document.querySelector('.foo')!.removeAttribute('w-foo');
+    expect(mounted['w-foo:bar.a.b'].el.nodeName).toBe('DIV');
+    expect(mounted['w-foo:bar.a.b'].el.classList.value).toBe('foo');
+    expect(mounted['w-foo:bar.a.b'].binding.arg).toBe('bar');
+    expect(mounted['w-foo:bar.a.b'].binding.modifiers.a).toBe(true);
+    expect(mounted['w-foo:bar.a.b'].binding.modifiers.b).toBe(true);
+    expect(mounted['w-foo:bar.a.b'].binding.value).toBe('FOOOOOO');
+    expect(mounted['w-foo:bar.a.b'].binding.mutation).not.toBeUndefined();
+    expect(mounted['w-foo:bar.a.b'].el.querySelector('span')!.textContent).toBe('BARRRR');
 
-    console.log(mounted);
+    expect(mounted['w-foo:baz.b'].el.nodeName).toBe('DIV');
+    expect(mounted['w-foo:baz.b'].el.classList.value).toBe('foo');
+    expect(mounted['w-foo:baz.b'].binding.arg).toBe('baz');
+    expect(mounted['w-foo:baz.b'].binding.modifiers.b).toBe(true);
+    expect(mounted['w-foo:baz.b'].binding.value).toBe('FOOOOOO');
+    expect(mounted['w-foo:baz.b'].binding.mutation).not.toBeUndefined();
+    expect(mounted['w-foo:baz.b'].el.querySelector('span')!.textContent).toBe('BARRRR');
+
+    expect(updated['w-foo:bar.a.b'].el.nodeName).toBe('DIV');
+    expect(updated['w-foo:bar.a.b'].el.classList.value).toBe('foo');
+    expect(updated['w-foo:bar.a.b'].binding.arg).toBe('bar');
+    expect(updated['w-foo:bar.a.b'].binding.modifiers.a).toBe(true);
+    expect(updated['w-foo:bar.a.b'].binding.modifiers.b).toBe(true);
+    expect(updated['w-foo:bar.a.b'].binding.value).toBe('FOOOOOO2');
+    expect(updated['w-foo:bar.a.b'].binding.oldValue).toBe('FOOOOOO');
+    expect(updated['w-foo:bar.a.b'].binding.mutation).not.toBeUndefined();
   });
-  //
-  // it('Add element with attribute in children / value changed / removed', async () => {
-  //   expect.hasAssertions();
-  //
-  //   wd.listen();
-  //
-  //   wd.register('foo', {
-  //     mounted: (el, bindings) => {
-  //       expect(el.nodeName).toBe('SPAN');
-  //       expect(el.classList.value).toBe('bar');
-  //       expect(bindings.value).toBe('FOOOOOO');
-  //       expect(bindings.mutation).not.toBeUndefined();
-  //       expect(el!.textContent).toBe('BARRRR');
-  //     },
-  //     updated: (el, bindings) => {
-  //       expect(el.nodeName).toBe('SPAN');
-  //       expect(bindings.value).toBe('FOOOOOO2');
-  //       expect(bindings.oldValue).toBe('FOOOOOO');
-  //       expect(bindings.mutation).not.toBeUndefined();
-  //       expect(el.getAttribute('w-foo')).toBe('FOOOOOO2');
-  //     },
-  //     unmounted: (el, bindings) => {
-  //       expect(el.nodeName).toBe('SPAN');
-  //       expect(el.classList.value).toBe('bar');
-  //       expect(bindings.mutation).not.toBeUndefined();
-  //       expect(el.getAttribute('w-foo')).toBeNull();
-  //     }
-  //   });
-  //
-  //   document.querySelector('.container')!.innerHTML = '<div class="foo"> <span w-foo="FOOOOOO" class="bar">BARRRR</span> </div>';
-  //
-  //   await nextTick();
-  //
-  //   document.querySelector('[w-foo]')!.setAttribute('w-foo', 'FOOOOOO2');
-  //
-  //   await nextTick();
-  //
-  //   document.querySelector('[w-foo]')!.removeAttribute('w-foo');
-  // });
-  //
-  // it('Attributes value changed', () => {
-  //   expect.hasAssertions();
-  //   wd.listen();
-  //
-  //   wd.register('copy', {
-  //     mounted: (node: Element, { value }) => {
-  //
-  //     },
-  //     updated: (node, { value }) => {
-  //       expect(value).toBe('Hello2');
-  //     }
-  //   });
-  //
-  //   document.querySelector('#copy-button')!.setAttribute('w-copy', 'Hello2');
-  // });
+
+  it('Add element with directive / element removed', async () => {
+    expect.hasAssertions();
+
+    wd.listen();
+
+    const mounted: Record<string, { el: Element, binding: WebDirectiveBinding<any> }> = {};
+    const unmounted: Record<string, { el: Element, binding: WebDirectiveBinding<any> }> = {};
+
+    wd.register('foo', {
+      mounted: (el, binding) => {
+        mounted[binding.directive] = { el, binding };
+      },
+      unmounted: (el, binding) => {
+        unmounted[binding.directive] = { el, binding };
+      }
+    });
+
+    document.querySelector('.container')!.innerHTML = '<div class="foo" w-foo:bar.a.b="FOOOOOO"> <span class="bar">BARRRR</span> </div>';
+
+    await nextTick();
+
+    document.querySelector('.container')!.remove();
+
+    await nextTick();
+
+    expect(mounted['w-foo:bar.a.b'].el.nodeName).toBe('DIV');
+    expect(mounted['w-foo:bar.a.b'].el.classList.value).toBe('foo');
+    expect(mounted['w-foo:bar.a.b'].binding.arg).toBe('bar');
+    expect(mounted['w-foo:bar.a.b'].binding.modifiers.a).toBe(true);
+    expect(mounted['w-foo:bar.a.b'].binding.modifiers.b).toBe(true);
+    expect(mounted['w-foo:bar.a.b'].binding.value).toBe('FOOOOOO');
+    expect(mounted['w-foo:bar.a.b'].binding.mutation).not.toBeUndefined();
+    expect(mounted['w-foo:bar.a.b'].el.querySelector('span')!.textContent).toBe('BARRRR');
+
+    expect(unmounted['w-foo:bar.a.b'].el.nodeName).toBe('DIV');
+    expect(unmounted['w-foo:bar.a.b'].el.classList.value).toBe('foo');
+    expect(unmounted['w-foo:bar.a.b'].binding.arg).toBe('bar');
+    expect(unmounted['w-foo:bar.a.b'].binding.modifiers.a).toBe(true);
+    expect(unmounted['w-foo:bar.a.b'].binding.modifiers.b).toBe(true);
+    expect(unmounted['w-foo:bar.a.b'].binding.value).toBe('FOOOOOO');
+    expect(unmounted['w-foo:bar.a.b'].binding.mutation).not.toBeUndefined();
+  });
 });

@@ -1,9 +1,13 @@
 import type { WebDirectiveBaseHook, WebDirectiveHandler, WebDirectiveOptions } from './types';
 
+export { singleton, nextTick } from './utilities';
+
 const disconnectKey = '_webDirectiveDisconnectors';
 
 const defaultOptions: Required<WebDirectiveOptions> = {
   prefix: 'w-',
+  enableAttrParams: false,
+  enableChildrenUpdated: false,
 };
 
 interface DirectiveInfo {
@@ -17,6 +21,8 @@ interface ElementInfo {
   disconnect: () => void;
   directives: string[];
 }
+
+type HookTask = 'mounted' | 'unmounted' | 'updated' | 'childrenUpdated';
 
 class WebDirective {
   directives: Record<string, DirectiveInfo> = {};
@@ -41,6 +47,10 @@ class WebDirective {
       after?: WebDirectiveBaseHook;
     };
     updated?: {
+      before?: WebDirectiveBaseHook;
+      after?: WebDirectiveBaseHook;
+    },
+    childrenUpdated?: {
       before?: WebDirectiveBaseHook;
       after?: WebDirectiveBaseHook;
     }
@@ -120,15 +130,18 @@ class WebDirective {
 
     // Mount registered directive before listen.
     for (const directive in this.directives) {
-      this.mountDirectiveInitial(directive);
+      this.findAndRunDirectivesOfSubtree(this.listenTarget, 'mounted', undefined, directive);
     }
   }
 
-  register<T extends Element = HTMLElement>(name: string, handler: WebDirectiveHandler<T>) {
+  register<T extends Element = HTMLElement, M extends Record<string, boolean> = Record<string, boolean>>(
+    name: string,
+    handler: WebDirectiveHandler<T, M>
+  ) {
     const directive = this.getDirectiveAttrName(name);
     this.directives[directive] = {
       name: directive,
-      handler,
+      handler: handler as WebDirectiveHandler<T, Record<string, boolean>>,
       elements: []
     };
 
@@ -138,40 +151,60 @@ class WebDirective {
     }
 
     // If listen already started, mount this directive
-    this.mountDirectiveInitial(directive);
+    this.findAndRunDirectivesOfSubtree(this.listenTarget, 'mounted', undefined, directive);
   }
 
-  private mountDirectiveInitial(directive: string) {
-    for (const element of this.listenTarget.querySelectorAll<HTMLElement>('*')) {
-      const attributes = element.getAttributeNames();
+  // private mountDirectiveInitial(directive: string) {
+  //   this.findAndRunDirectivesOfSubtree(this.listenTarget, 'unmounted');
+  //
+  //   // if (this.options.enableAttrParams) {
+  //   //   for (const element of this.listenTarget.querySelectorAll<HTMLElement>('*')) {
+  //   //     this.findAndRunDirectivesFromNode(element, 'mounted', undefined, directive);
+  //   //
+  //   //     // const attributes = element.getAttributeNames();
+  //   //     //
+  //   //     // for (const attribute of attributes) {
+  //   //     //   if (attribute.startsWith(directive)) {
+  //   //     //     this.runDirectiveIfExists(attribute, element, 'mounted');
+  //   //     //   }
+  //   //     // }
+  //   //   }
+  //   //
+  //   //   return;
+  //   // }
+  //   //
+  //   // for (const element of this.listenTarget.querySelectorAll<HTMLElement>(`[${directive}]`)) {
+  //   //   this.runDirectiveIfExists(directive, element, 'mounted');
+  //   // }
+  // }
 
-      for (const attribute of attributes) {
-        if (attribute.startsWith(directive)) {
-          this.runDirectiveIfExists(attribute, element, 'mounted');
-        }
-      }
-    }
-  }
-
+  /**
+   * This method is to listen the root element for any changes.
+   * The listen event contains:
+   * - Child added/removed, and will scan all directives from added/removed nodes
+   * - Self Attributes changed
+   *
+   * This listener will run forever until disconnect() is called.
+   */
   private observeRoot(element: Element): () => void {
     const observer = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
         // Added Nodes
         for (const node of mutation.addedNodes) {
-          // Root node attached directives
-          this.runDirectivesOfNode(node as HTMLElement, 'mounted', mutation);
+          // Run self mounted
+          this.findAndRunDirectivesOfNode(node as HTMLElement, 'mounted', mutation);
 
-          // Find children with all directives
-          if ('querySelectorAll' in node) {
-            for (const childNode of (node as HTMLElement).querySelectorAll<HTMLElement>(`*`)) {
-              this.runDirectivesOfNode(childNode, 'mounted', mutation);
-            }
-          }
+          // Run all subtree mounted
+          this.findAndRunDirectivesOfSubtree(node as HTMLElement, 'mounted', mutation);
         }
 
         // Handle if attributes remove from node
         for (const node of mutation.removedNodes) {
-          this.runDirectivesOfNode(node as HTMLElement, 'unmounted', mutation);
+          // Run self unmounted
+          this.findAndRunDirectivesOfNode(node as HTMLElement, 'unmounted', mutation);
+
+          // Run all subtree unmounted
+          this.findAndRunDirectivesOfSubtree(node as HTMLElement, 'unmounted', mutation);
 
           // this.findDirectivesFromNode(node).forEach((directiveWithArgs) => {
           //   this.runDirectiveIfExists(directiveWithArgs, node as HTMLElement, 'unmounted', mutation);
@@ -187,7 +220,7 @@ class WebDirective {
           this.runDirectiveIfExists(
             mutation.attributeName!,
             mutation.target as HTMLElement,
-            mutation.oldValue == null ? 'mounted' : 'updated', 
+            mutation.oldValue == null ? 'mounted' : 'updated',
             mutation
           );
         }
@@ -197,7 +230,7 @@ class WebDirective {
     observer.observe(element, {
       attributes: true,
       attributeOldValue: true,
-      childList: true,
+      childList: this.options.enableChildrenUpdated,
       characterData: false,
       subtree: true
     });
@@ -207,20 +240,36 @@ class WebDirective {
     };
   }
 
+  /**
+   * This method is to listen an element which is attached at least 1 or more directives.
+   * The listen event contains:
+   * - Self attributes changed
+   * - Children changed (if enabled)
+   *
+   * And this listener will be removed when all directives are unmounted from this element.
+   */
   private observeAttachedElement(element: Element): () => void {
     const observer = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
-        // Remove
-        if (mutation.type === 'attributes' && !(mutation.target as Element).getAttribute(mutation.attributeName!)) {
-          this.runDirectiveIfExists(mutation.attributeName!, mutation.target as HTMLElement, 'unmounted', mutation);
+        // Attributes updated
+        if (
+          mutation.type === 'attributes'
+          && mutation.attributeName
+          && mutation.target === element
+        ) {
+          if (!(mutation.target as Element).getAttribute(mutation.attributeName!)) {
+            // Remove
+            this.runDirectiveIfExists(mutation.attributeName!, mutation.target as HTMLElement, 'unmounted', mutation);
+          } else {
+            // Attribute value changed
+            this.runDirectiveIfExists(mutation.attributeName!, mutation.target as HTMLElement, 'updated', mutation);
+          }
         }
 
-        for (const directiveWithArgs of this.findDirectivesFromNode(mutation.target as Element)) {
-          // Todo: mutation removes triggered because beforeEach reset DOM, we must disconnect observer in unmounted hook
-          console.log(mutation.target, mutation.type, Array.from(mutation.addedNodes), Array.from(mutation.removedNodes));
-          // Attributes
-          if (mutation.type === 'attributes' || mutation.type === 'childList') {
-            this.runDirectiveIfExists(directiveWithArgs, mutation.target as HTMLElement, 'updated', mutation);
+        // Children changed. Let's run all attributes
+        if (this.options.enableChildrenUpdated && mutation.type === 'childList') {
+          for (const directiveWithArgs of this.findDirectivesFromNode(element)) {
+            this.runDirectiveIfExists(directiveWithArgs, element as HTMLElement, 'childrenUpdated', mutation);
           }
         }
       }
@@ -228,11 +277,12 @@ class WebDirective {
 
     observer.observe(element, {
       attributes: true,
-      childList: true,
+      childList: this.options.enableChildrenUpdated,
+      subtree: this.options.enableChildrenUpdated,
       characterData: true,
       attributeOldValue: true,
       characterDataOldValue: true,
-      attributeFilter: Object.keys(this.directives)
+      // attributeFilter: Object.keys(this.directives)
     });
 
     return () => {
@@ -277,7 +327,7 @@ class WebDirective {
     }
   }
 
-  getDirective(directive: string): DirectiveInfo {
+  getDirectiveInfo(directive: string): DirectiveInfo | undefined {
     return this.directives[directive];
   }
 
@@ -296,28 +346,32 @@ class WebDirective {
   private runDirectiveIfExists(
     directive: string,
     node: HTMLElement,
-    task: 'mounted' | 'unmounted' | 'updated',
+    task: HookTask,
     mutation: MutationRecord | undefined = undefined
   ) {
     const { name, arg, modifiers } = this.splitDirectiveArgs(directive);
 
-    const instance = this.getDirective(name);
+    const info = this.getDirectiveInfo(name);
+
+    if (!info) {
+      return;
+    }
 
     if (task === 'mounted') {
       // Add element to directive map
-      instance.elements.push(node);
+      info.elements.push(node);
     } else if (task === 'unmounted') {
       // Remove element from directive map
-      const index = instance.elements.indexOf(node);
+      const index = info.elements.indexOf(node);
 
       if (index > -1) {
-        instance.elements.splice(index, 1);
+        info.elements.splice(index, 1);
       }
     }
 
-    const handler = instance.handler;
+    const handler = info.handler;
 
-    if (handler && task in handler) {
+    if (task in handler) {
       const bindings = {
         directive,
         name,
@@ -342,14 +396,34 @@ class WebDirective {
     }
   }
 
-  private runDirectivesOfNode(
+  private findAndRunDirectivesOfNode(
     node: HTMLElement,
-    task: 'mounted' | 'unmounted' | 'updated',
+    task: HookTask,
     mutation?: MutationRecord,
     directive?: string,
   ) {
     for (const directiveWithArgs of this.findDirectivesFromNode(node, directive)) {
       this.runDirectiveIfExists(directiveWithArgs, node, task, mutation);
+    }
+  }
+
+  private findAndRunDirectivesOfSubtree(node: Element, task: HookTask, mutation?: MutationRecord, directive?: string) {
+    if (!('querySelectorAll' in node)) {
+      return;
+    }
+
+    if (this.options.enableAttrParams) {
+      for (const childNode of node.querySelectorAll<HTMLElement>('*')) {
+        this.findAndRunDirectivesOfNode(childNode, task, mutation, directive);
+      }
+    } else {
+      const directives = directive ? [directive] : Object.keys(this.directives);
+
+      for (const directive of directives) {
+        for (const element of node.querySelectorAll<HTMLElement>(`[${directive}]`)) {
+          this.runDirectiveIfExists(directive, element, task);
+        }
+      }
     }
   }
 
