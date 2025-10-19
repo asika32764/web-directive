@@ -1,5 +1,5 @@
 import type { WebDirectiveBaseHook, WebDirectiveBinding, WebDirectiveHandler, WebDirectiveOptions } from './types';
-import { toCamelCase } from './utilities';
+import { toCamelCase, toKebabCase } from './utilities';
 
 export { singleton, nextTick, useCurrentContext, useEventListener } from './utilities';
 
@@ -386,7 +386,7 @@ class WebDirective {
 
     const eventPrefix = this.options.eventPrefix;
 
-    el.dispatchEvent(new CustomEvent(eventPrefix + task, { detail: { el, binding }}));
+    el.dispatchEvent(new CustomEvent(eventPrefix + toKebabCase(task), { detail: { el, binding }}));
     el.dispatchEvent(new CustomEvent(`__wd:${task}:${binding.directive}`, { detail: { el, binding }}));
 
     WebDirective.currentContext = null;

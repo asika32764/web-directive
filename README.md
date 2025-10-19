@@ -112,7 +112,7 @@ function copy(e: MouseEvent) {
 
 As an early experimental version, we heavily referenced Vue.js for the interface to reduce the learning curve for
 developers. However, due to some limitations of native HTML, we cannot achieve exactly the same behavior.
-Implementations of directives like this have been used in our team since 2020, it is very stable and intuitive, 
+Implementations of directives like this have been used in our team since 2020, it is very stable and intuitive,
 and perfectly suitable for production use.
 
 ## Installation
@@ -259,15 +259,17 @@ import { singleton } from 'web-directive';
 
 wd.register('foo', {
   mounted(el, { value }) {
+    // Get or create singleton instance
     singleton(el, 'foo', () => new Foo(value));
   },
 
   updated(el, { value }) {
+    // Get singleton instance and update it
     singleton(el, 'foo')?.setOptions(value);
   },
 
   unmounted(el, binding) {
-    // Remove it
+    // Remove singleton instance and clean up
     const foo = singleton(el, 'foo', false);
 
     foo?.stop();
@@ -312,11 +314,11 @@ wd.register('foo', {
 });
 ```
 
-## Listen to Children Elements
+## Listen to Child Elements
 
 By default, unlike Vue.js, WebDirective's `updated` hook only listen to the updates of element itself.
 If you want to listen to children elements' changes, you can set the `enableChildrenUpdated` option to `true`.
-Then you must use `childrenUpdated` hook to handle children elements' updates.
+Different from Vue.js, you must use `childrenUpdated` hook to handle children elements' updates.
 
 ```ts
 import WebDirective from './index';
@@ -342,8 +344,9 @@ wd.register('foo', {
 
 ## Argument and Modifiers
 
-WebDirective supports argument and modifiers like Vue.js. However, this feature will cause heavily performance issue,
-so it is default disabled, you must manually enable it.
+WebDirective supports argument and modifiers like Vue.js. However, due to native HTML not supports query elements by
+dynamic attribute names, this function must traverse elements to find attributes, which is not very efficient, so it is
+disabled by default, you must manually enable it.
 
 ```ts
 import WebDirective from './index';
@@ -351,6 +354,8 @@ import WebDirective from './index';
 const wd = new WebDirective({
   enableAttrParams: true
 });
+
+wd.listen();
 ```
 
 Now you can add directive like this:
@@ -426,6 +431,10 @@ All hooks list below:
 - `childrenUpdated(el, binding)`: Called when the children elements of the element are updated. This hook is only
   available when `enableChildrenUpdated` option is set to `true`.
 
+> [!note]
+> Unlike Vue.js, all hooks will be called after mutation occurs, at this time, the DOM is already updated.
+> So WebDirective do not provide `beforeMount`, `beforeUpdate` and `beforeUnmount` hooks.
+
 ### Updated Timing
 
 WebDirective uses MutationObserver to listen to DOM changes, so the `updated` hook will be called after the mutation
@@ -470,12 +479,25 @@ console.log(updated); // 1
 
 WebDirective can emit custom events when directives are mounted, unmounted, or updated.
 
-By default, the event names are prefixed with `wd:`. You can listen to these events on the element.
+By default, the event names are prefixed with `wd:`. You can listen to these events on the element:
+
+- `wd:mounted`
+- `wd:unmounted`
+- `wd:updated`
+- `wd:children-updated`
 
 ```ts
 el.addEventListener('wd:mounted', (e) => {
   const binding = e.detail as WebDirectiveBinding;
   console.log(`Directive ${binding.directive} mounted`);
+});
+```
+
+If you want to change the event prefix, you can set the `eventPrefix` option when creating WebDirective instance.
+
+```ts
+const wd = new WebDirective({
+  eventPrefix: 'flower:'
 });
 ```
 
