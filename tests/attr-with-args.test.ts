@@ -170,8 +170,6 @@ describe('Simple Attributes Tests', () => {
   });
 
   it('Add attribute with only arg', async () => {
-    expect.hasAssertions();
-
     wd.listen();
 
     const mounted: Record<string, { el: Element, binding: WebDirectiveBinding<any> }> = {};
@@ -195,8 +193,6 @@ describe('Simple Attributes Tests', () => {
   });
 
   it('Add attribute with only modifiers', async () => {
-    expect.hasAssertions();
-
     wd.listen();
 
     const mounted: Record<string, { el: Element, binding: WebDirectiveBinding<any> }> = {};
@@ -211,12 +207,12 @@ describe('Simple Attributes Tests', () => {
 
     await nextTick();
 
-    expect(mounted['w-foo:bar'].el.nodeName).toBe('DIV');
-    expect(mounted['w-foo:bar'].el.classList.value).toBe('container');
-    expect(mounted['w-foo:bar'].binding.arg).toBeUndefined();
-    expect(mounted['w-foo:bar'].binding.modifiers.a).toBe(true);
-    expect(mounted['w-foo:bar'].binding.modifiers.b).toBe(true);
-    expect(mounted['w-foo:bar'].binding.value).toBe('FOOOOOO');
-    expect(mounted['w-foo:bar'].binding.mutation).not.toBeUndefined();
+    expect(mounted['w-foo.a.b'].el.nodeName).toBe('DIV');
+    expect(mounted['w-foo.a.b'].el.classList.value).toBe('container');
+    expect(mounted['w-foo.a.b'].binding.arg).toBeNull();
+    expect(mounted['w-foo.a.b'].binding.modifiers.a).toBe(true);
+    expect(mounted['w-foo.a.b'].binding.modifiers.b).toBe(true);
+    expect(mounted['w-foo.a.b'].binding.value).toBe('FOOOOOO');
+    expect(mounted['w-foo.a.b'].binding.mutation).not.toBeUndefined();
   });
 });
