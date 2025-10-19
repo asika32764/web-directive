@@ -1,5 +1,9 @@
 # Web Directive
 
+[![Version](https://img.shields.io/npm/v/web-directive.svg?style=flat-square)](https://www.npmjs.com/package/web-directive)
+![Test](https://img.shields.io/github/actions/workflow/status/asika32764/web-directive/ci.yml?style=flat-square)
+[![License](https://img.shields.io/npm/l/web-directive.svg?style=flat-square)](LICENSE)
+
 A library to implement directive pattern for native HTML without any framework,
 which is inspired by Vue.js.
 
