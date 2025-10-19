@@ -1,12 +1,8 @@
-
-declare global {
-  interface Element {
-    _webDirectiveDisconnectors?: Record<string, Function>;
-  }
-}
+import WebDirective from '../index.ts';
 
 export interface WebDirectiveOptions {
   prefix?: string;
+  eventPrefix?: string;
   enableAttrParams?: boolean;
   enableChildrenUpdated?: boolean;
 }
@@ -23,6 +19,7 @@ export interface WebDirectiveBinding<T extends Element = HTMLElement, M extends 
   handler: WebDirectiveHandler<T, M>;
   arg: string | null;
   modifiers: M;
+  instance: WebDirective;
 }
 
 export type WebDirectiveHandlerHook<T extends Element = HTMLElement, M extends Record<string, boolean> = Record<string, boolean>> = (node: T, bindings: WebDirectiveBinding<T, M>) => void

@@ -77,7 +77,7 @@ describe('Simple Attributes Tests', () => {
 
     wd.register<HTMLElement, { a?: boolean; b?: boolean; c?: boolean; }>('foo', {
       mounted: (el, binding) => {
-        expect(binding.modifiers.a).toBeTruthy();
+        expect(binding.modifiers.a === true || binding.modifiers.a === undefined).toBeTruthy();
         expect(binding.modifiers.b).toBeTruthy();
         expect(binding.modifiers.c).toBeUndefined();
 

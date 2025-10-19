@@ -1,3 +1,5 @@
+import WebDirective from '../index.ts';
+import { useCurrentContext } from './lifecycle.ts';
 
 export function setData(el: Element, name: string, value: any) {
   // @ts-ignore
@@ -29,4 +31,20 @@ export function singleton<E extends Element, T = any>(el: E, name: string, facto
 
 function createUid() {
   return Math.random().toString(36).substring(2, 10);
+}
+
+export function useEventListener(el: Element, event: string, handler: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions) {
+  const { el: baseEl, binding } = useCurrentContext();
+
+  el.addEventListener(event, handler, options);
+
+  const off = () => {
+    el.removeEventListener(event, handler, options);
+  };
+
+  baseEl.addEventListener('__wd:unmounted:' + binding.directive, (e) => {
+    off();
+  }, { once: true });
+
+  return off;
 }

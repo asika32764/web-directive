@@ -1,11 +1,10 @@
-import type { WebDirectiveBaseHook, WebDirectiveHandler, WebDirectiveOptions } from './types';
+import type { WebDirectiveBaseHook, WebDirectiveBinding, WebDirectiveHandler, WebDirectiveOptions } from './types';
 
-export { singleton, nextTick } from './utilities';
-
-const disconnectKey = '_webDirectiveDisconnectors';
+export { singleton, nextTick, useCurrentContext, useEventListener } from './utilities';
 
 const defaultOptions: Required<WebDirectiveOptions> = {
   prefix: 'w-',
+  eventPrefix: 'wd:',
   enableAttrParams: false,
   enableChildrenUpdated: false,
 };
@@ -25,19 +24,19 @@ interface ElementInfo {
 type HookTask = 'mounted' | 'unmounted' | 'updated' | 'childrenUpdated';
 
 class WebDirective {
-  directives: Record<string, DirectiveInfo> = {};
+  private directives: Record<string, DirectiveInfo> = {};
 
-  attachedElements: WeakMap<Element, ElementInfo> = new WeakMap();
-
-  directiveMap: Record<string, WebDirectiveHandler[]> = {};
+  private attachedElements: WeakMap<Element, ElementInfo> = new WeakMap();
 
   listenTarget: HTMLElement = document.body;
 
   options: Required<WebDirectiveOptions>;
 
-  disconnectCallback?: (() => void);
+  private disconnectCallback?: (() => void);
 
-  hooks: {
+  static currentContext: { el: Element, binding: WebDirectiveBinding } | null = null;
+
+  private hooks: {
     mounted: {
       before?: WebDirectiveBaseHook;
       after?: WebDirectiveBaseHook;
@@ -73,14 +72,6 @@ class WebDirective {
         if (!elementInfo.directives.includes(directive)) {
           elementInfo.directives.push(directive);
         }
-
-        // const disconnect = this.observeAttachedElement(node);
-        //
-        // // Todo: can remove this
-        // node[disconnectKey] = node[disconnectKey] || {};
-        // node[disconnectKey][directive] = disconnect;
-
-        this.directives[name].elements.push(node as HTMLElement);
       }
     },
     unmounted: {
@@ -101,16 +92,6 @@ class WebDirective {
             this.attachedElements.delete(node);
           }
         }
-
-        //
-        // if (!node[disconnectKey]) {
-        //   return;
-        // }
-        //
-        // if (node[disconnectKey][directive]) {
-        //   node[disconnectKey][directive]();
-        //   delete node[disconnectKey][directive];
-        // }
       }
     }
   };
@@ -126,7 +107,19 @@ class WebDirective {
 
     this.listenTarget = target || document.body;
 
-    this.disconnectCallback = this.observeRoot(this.listenTarget);
+    const disconnectRoot = this.observeRoot(this.listenTarget);
+
+    this.disconnectCallback = () => {
+      disconnectRoot();
+
+      for (const directive in this.directives) {
+        for (const element of this.directives[directive].elements) {
+          for (const directiveWithArgs of this.findDirectivesFromNode(element, directive)) {
+            this.runDirectiveIfExists(directiveWithArgs, element, 'unmounted');
+          }
+        }
+      }
+    };
 
     // Mount registered directive before listen.
     for (const directive in this.directives) {
@@ -294,11 +287,11 @@ class WebDirective {
     const directive = this.getDirectiveAttrName(name);
 
     if (this.directives[directive]) {
-      this.directives[directive].elements.forEach((element) => {
-        this.findDirectivesFromNode(element, directive).forEach((directiveWithArgs) => {
+      for (const element of this.directives[directive].elements) {
+        for (const directiveWithArgs of this.findDirectivesFromNode(element, directive)) {
           this.runDirectiveIfExists(directiveWithArgs, element, 'unmounted');
-        });
-      });
+        }
+      }
 
       delete this.directives[directive];
     }
@@ -316,14 +309,6 @@ class WebDirective {
     if (this.disconnectCallback) {
       this.disconnectCallback();
       this.disconnectCallback = undefined;
-    }
-
-    for (const directive in this.directives) {
-      this.directives[directive].elements.forEach((element) => {
-        this.findDirectivesFromNode(element, directive).forEach((directiveWithArgs) => {
-          this.runDirectiveIfExists(directiveWithArgs, element, 'unmounted');
-        });
-      });
     }
   }
 
@@ -345,7 +330,7 @@ class WebDirective {
 
   private runDirectiveIfExists(
     directive: string,
-    node: HTMLElement,
+    el: HTMLElement,
     task: HookTask,
     mutation: MutationRecord | undefined = undefined
   ) {
@@ -359,10 +344,10 @@ class WebDirective {
 
     if (task === 'mounted') {
       // Add element to directive map
-      info.elements.push(node);
+      info.elements.push(el);
     } else if (task === 'unmounted') {
       // Remove element from directive map
-      const index = info.elements.indexOf(node);
+      const index = info.elements.indexOf(el);
 
       if (index > -1) {
         info.elements.splice(index, 1);
@@ -371,29 +356,39 @@ class WebDirective {
 
     const handler = info.handler;
 
-    if (task in handler) {
-      const bindings = {
-        directive,
-        name,
-        node,
-        value: node.getAttribute(directive),
-        oldValue: mutation?.oldValue,
-        mutation,
-        handler,
-        arg,
-        modifiers
-      };
+    const binding: WebDirectiveBinding = {
+      directive,
+      name,
+      node: el,
+      value: el.getAttribute(directive),
+      oldValue: mutation?.oldValue,
+      mutation,
+      handler,
+      arg,
+      modifiers,
+      instance: this,
+    };
 
-      if (this.hooks?.[task]?.before) {
-        this.hooks[task]?.before?.(node, bindings);
-      }
+    WebDirective.currentContext = { el, binding };
 
-      handler[task]?.(node, bindings);
-
-      if (this.hooks?.[task]?.after) {
-        this.hooks[task]?.after?.(node, bindings);
-      }
+    if (this.hooks?.[task]?.before) {
+      this.hooks[task]?.before?.(el, binding);
     }
+
+    if (task in handler) {
+      handler[task]?.(el, binding);
+    }
+
+    if (this.hooks?.[task]?.after) {
+      this.hooks[task]?.after?.(el, binding);
+    }
+
+    const eventPrefix = this.options.eventPrefix;
+
+    el.dispatchEvent(new CustomEvent(eventPrefix + task, { detail: { el, binding }}));
+    el.dispatchEvent(new CustomEvent(`__wd:${task}:${binding.directive}`, { detail: { el, binding }}));
+
+    WebDirective.currentContext = null;
   }
 
   private findAndRunDirectivesOfNode(

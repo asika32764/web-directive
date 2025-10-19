@@ -1,5 +1,4 @@
-import WebDirective from '../src';
-import { nextTick } from '../src/utilities/timing';
+import WebDirective, { nextTick, useEventListener } from '../src';
 
 let wd: WebDirective;
 
@@ -39,7 +38,7 @@ describe('Simple Attributes Tests', () => {
         expect(value).toBe('Hello');
         expect(el.textContent?.trim()).toBe('Copy');
       }
-    })
+    });
     wd.listen();
   });
 
@@ -326,6 +325,86 @@ describe('Simple Attributes Tests', () => {
     expect(hooks.childrenUpdated).toBe(0);
   });
 
+  it('Test remove directive', async () => {
+    wd.listen();
+
+    const hooks = {
+      mounted: 0,
+      unmounted: 0,
+    };
+
+    wd.register('foo', {
+      mounted: (el, bindings) => {
+        hooks.mounted++;
+      },
+      unmounted: (el, bindings) => {
+        hooks.unmounted++;
+      },
+    });
+
+    // Test add attr
+    const app = document.querySelector<HTMLDivElement>('#app')!;
+
+    app.setAttribute('w-foo', 'FOOOOOO');
+
+    await nextTick();
+
+    // @ts-ignore
+    expect(wd.directives['w-foo'].elements.length).toBe(1);
+
+    await nextTick();
+
+    wd.remove('foo');
+
+    await nextTick();
+
+    expect(hooks.mounted).toBe(1);
+    expect(hooks.unmounted).toBe(1);
+
+    // @ts-ignore
+    expect(wd.directives['w-foo']).toBeUndefined();
+  });
+
+  it('Test discounted', async () => {
+    wd.listen();
+
+    const hooks = {
+      mounted: 0,
+      unmounted: 0,
+    };
+
+    wd.register('foo', {
+      mounted: (el, bindings) => {
+        hooks.mounted++;
+      },
+      unmounted: (el, bindings) => {
+        hooks.unmounted++;
+      },
+    });
+
+    // Test add attr
+    const app = document.querySelector<HTMLDivElement>('#app')!;
+
+    app.setAttribute('w-foo', 'FOOOOOO');
+
+    await nextTick();
+
+    // @ts-ignore
+    expect(wd.directives['w-foo'].elements.length).toBe(1);
+
+    await nextTick();
+
+    wd.disconnect();
+
+    await nextTick();
+
+    expect(hooks.mounted).toBe(1);
+    expect(hooks.unmounted).toBe(1);
+
+    // @ts-ignore
+    expect(wd.directives['w-foo'].elements.length).toBe(0);
+  });
+
   it('Attributes value changed', () => {
     expect.hasAssertions();
     wd.listen();
@@ -340,5 +419,65 @@ describe('Simple Attributes Tests', () => {
     });
 
     document.querySelector('#copy-button')!.setAttribute('w-copy', 'Hello2');
+  });
+
+  it('DOM Events', async () => {
+    expect.hasAssertions();
+    wd.listen();
+
+    const events: Record<string, any> = {};
+
+    document.querySelector<HTMLDivElement>('#copy-button')?.addEventListener('wd:mounted', (e) => {
+      events['mounted'] = (e as CustomEvent).detail;
+    });
+
+    document.querySelector<HTMLDivElement>('#copy-button')?.addEventListener('wd:updated', (e) => {
+      events['updated'] = (e as CustomEvent).detail;
+    });
+
+    wd.register('copy', {
+      mounted: (node: Element, { value }) => {
+
+      },
+      updated: (node, { value }) => {
+        expect(value).toBe('Hello2');
+      }
+    });
+
+    document.querySelector('#copy-button')!.setAttribute('w-copy', 'Hello2');
+
+    await nextTick();
+
+    expect(events['mounted'].binding.directive).toBe('w-copy');
+    expect(events['updated'].binding.directive).toBe('w-copy');
+  });
+
+  it('useEventListener', async () => {
+    expect.hasAssertions();
+    wd.listen();
+
+    let clicks = 0;
+
+    wd.register('copy', {
+      mounted: (node: Element, { value }) => {
+        useEventListener(node, 'click', () => {
+          clicks++;
+        });
+      },
+    });
+
+    const button = document.querySelector<HTMLButtonElement>('#copy-button')!;
+
+    button.click();
+    button.click();
+
+    button.removeAttribute('w-copy');
+
+    await nextTick();
+
+    button.click();
+    button.click();
+
+    expect(clicks).toBe(2);
   });
 });
