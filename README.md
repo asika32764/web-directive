@@ -1,6 +1,6 @@
 # Web Directive
 
-A library to implement directive functions for native HTML without any framework,
+A library to implement directive pattern for native HTML without any framework,
 which is inspired by Vue.js.
 
 See [DEMO](https://codepen.io/asika32764/pen/RwmoWWa)

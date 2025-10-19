@@ -1,5 +1,4 @@
-import WebDirective from '../index.ts';
-import { useCurrentContext } from './lifecycle.ts';
+import { useCurrentContext } from './lifecycle';
 
 export function setData(el: Element, name: string, value: any) {
   // @ts-ignore
