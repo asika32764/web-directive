@@ -2,6 +2,11 @@ import type { WebDirectiveBaseHook, WebDirectiveBinding, WebDirectiveHandler, We
 import { toCamelCase, toKebabCase } from './utilities';
 
 export { singleton, nextTick, useCurrentContext, useEventListener } from './utilities';
+export type {
+  WebDirectiveBinding,
+  WebDirectiveHandler,
+  WebDirectiveOptions,
+} from './types';
 
 const defaultOptions: Required<WebDirectiveOptions> = {
   prefix: 'w-',

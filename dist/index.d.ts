@@ -1,8 +1,3 @@
-import { WebDirectiveBinding } from '../types';
-import { WebDirectiveBinding as WebDirectiveBinding_2 } from './types';
-import { WebDirectiveHandler } from './types';
-import { WebDirectiveOptions } from './types';
-
 declare interface DirectiveInfo {
     name: string;
     handler: WebDirectiveHandler<any>;
@@ -32,7 +27,7 @@ declare class WebDirective {
     private disconnectCallback?;
     static currentContext: {
         el: Element;
-        binding: WebDirectiveBinding_2;
+        binding: WebDirectiveBinding;
     } | null;
     private hooks;
     constructor(options?: WebDirectiveOptions);
@@ -68,5 +63,34 @@ declare class WebDirective {
     private findDirectivesFromNode;
 }
 export default WebDirective;
+
+export declare interface WebDirectiveBinding<T extends Element = HTMLElement, M extends Record<string, boolean> = Record<string, boolean>> {
+    directive: string;
+    name: string;
+    node: T;
+    value: any;
+    oldValue: any;
+    mutation?: MutationRecord;
+    handler: WebDirectiveHandler<T, M>;
+    arg: string | null;
+    modifiers: M;
+    instance: WebDirective;
+}
+
+export declare interface WebDirectiveHandler<T extends Element = HTMLElement, M extends Record<string, boolean> = Record<string, boolean>> {
+    mounted?: WebDirectiveHandlerHook<T, M>;
+    unmounted?: WebDirectiveHandlerHook<T, M>;
+    updated?: WebDirectiveHandlerHook<T, M>;
+    childrenUpdated?: WebDirectiveHandlerHook<T, M>;
+}
+
+declare type WebDirectiveHandlerHook<T extends Element = HTMLElement, M extends Record<string, boolean> = Record<string, boolean>> = (node: T, bindings: WebDirectiveBinding<T, M>) => void;
+
+export declare interface WebDirectiveOptions {
+    prefix?: string;
+    eventPrefix?: string;
+    enableAttrParams?: boolean;
+    enableChildrenUpdated?: boolean;
+}
 
 export { }

@@ -7,6 +7,7 @@
   "module": "dist/web-directive.js",
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/web-directive.js",
       "require": "./dist/web-directive.umd.cjs"
     }
