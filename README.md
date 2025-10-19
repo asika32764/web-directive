@@ -34,7 +34,7 @@ See [DEMO](https://codepen.io/asika32764/pen/RwmoWWa)
     * [Register Directives](#register-directives)
     * [Singleton Your Object](#singleton-your-object)
     * [Listener Helper](#listener-helper)
-  * [Listen to Children Elements](#listen-to-children-elements)
+  * [Listen to Child Elements](#listen-to-child-elements)
   * [Argument and Modifiers](#argument-and-modifiers)
     * [Add Multiple Directives](#add-multiple-directives)
     * [Modifiers Cases](#modifiers-cases)
@@ -56,9 +56,11 @@ For example, if you want a `copy to clipboard` feature that works across project
 is to write JS that binds a click event to the button:
 
 ```js
-document.querySelector('#copy-btn').addEventListener('click', (e) => {
-  navigator.clipboard.writeText(e.currentTarget.dataset.text);
-});
+for (var el of document.querySelectorAll('.js-copy-btn')) {
+  el.addEventListener('click', (e) => {
+    navigator.clipboard.writeText(e.currentTarget.dataset.text);
+  });
+}
 ```
 
 This works in static HTML, but it can fail with virtual DOM frameworks like Vue or React because the virtual DOM may
@@ -69,14 +71,28 @@ rewrite the DOM tree and remove event bindings.
 <template>
   <App>
     <!-- This button not work -->
-    <button id="copy-btn" data-text="Hello">
+    <button class="js-copy-btn" data-text="Hello">
       Copy
     </button>
   </App>
 </template>
 ```
 
-To make small features reusable across projects and environments, a common solution is to implement a Web Component such
+To make small features reusable across projects and environments, a common solution is to use
+`delegated event listeners`:
+
+```ts
+$(document).on('click', '.js-copy-btn', (e) => {
+  navigator.clipboard.writeText(e.currentTarget.dataset.text);
+});
+```
+
+This approach has some drawbacks. First, the `delegate` pattern is not commonly used; for developers unfamiliar with
+jQuery or similar libraries, this pattern can be confusing. Second, for SPAs that frequently need to unbind event
+handlers, this method can lead to memory leaks or unexpected behavior because the event handlers remain attached to the
+DOM even after the related elements have been removed.
+
+Another solution is implement a `WebComponent` such
 as `<copy-button>`, which ensures it works everywhere. However, Web Components have a higher development barrier: adding
 a custom HTML element for a simple feature can feel heavy or unintuitive, and enabling Shadow DOM may make CSS harder to
 manage.
