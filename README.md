@@ -23,6 +23,7 @@ See [DEMO](https://codepen.io/asika32764/pen/RwmoWWa)
 ```
 
 <!-- TOC -->
+
 * [Web Directive](#web-directive)
   * [Why Need This?](#why-need-this)
   * [Installation](#installation)
@@ -38,6 +39,7 @@ See [DEMO](https://codepen.io/asika32764/pen/RwmoWWa)
     * [Events](#events)
   * [Custom Prefix](#custom-prefix)
   * [Options](#options)
+
 <!-- TOC -->
 
 ## Why Need This?
@@ -107,6 +109,11 @@ function copy(e: MouseEvent) {
   </App>
 </template>
 ```
+
+As an early experimental version, we heavily referenced Vue.js for the interface to reduce the learning curve for
+developers. However, due to some limitations of native HTML, we cannot achieve exactly the same behavior.
+Implementations of directives like this have been used in our team since 2020, it is very stable and intuitive, 
+and perfectly suitable for production use.
 
 ## Installation
 
@@ -270,7 +277,8 @@ wd.register('foo', {
 
 ### Listener Helper
 
-WebDirective provides a `useEventListener()` helper to help you listen to events and auto unbind them when element unmounted.
+WebDirective provides a `useEventListener()` helper to help you listen to events and auto unbind them when element
+unmounted.
 
 ```ts
 import { useEventListener } from 'web-directive';
@@ -293,7 +301,7 @@ wd.register('foo', {
     useEventListener(el, 'click', (e) => {
       console.log('Element clicked');
     });
-    
+
     await someAsyncTask();
 
     // ERROR: Can not find context to bind event
