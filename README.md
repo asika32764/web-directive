@@ -33,6 +33,7 @@ See [DEMO](https://codepen.io/asika32764/pen/RwmoWWa)
     * [Register Directives](#register-directives)
     * [Singleton Your Object](#singleton-your-object)
     * [Listener Helper](#listener-helper)
+  * [Real World Example](#real-world-example)
   * [Listen to Child Elements](#listen-to-child-elements)
   * [Argument and Modifiers](#argument-and-modifiers)
     * [Add Multiple Directives](#add-multiple-directives)
@@ -65,6 +66,7 @@ This works in static HTML, but it can fail with virtual DOM frameworks like Vue 
 rewrite the DOM tree and remove event bindings.
 
 ```vue
+
 <template>
   <App>
     <!-- This button not work in Vue -->
@@ -99,9 +101,10 @@ jQuery or similar libraries and may cause confused. Second, for SPAs that freque
 handlers, this method can lead to memory leaks or unexpected behavior because the listeners remain attached to the
 DOM even after it have been removed.
 
-Another solution is implement a `CustomElement` such as `<copy-button>`, which ensures it works everywhere. 
+Another solution is implement a `CustomElement` such as `<copy-button>`, which ensures it works everywhere.
 
 ```html
+
 <script>
   class CopyButton extends HTMLElement {
     connectedCallback() {
@@ -355,6 +358,115 @@ wd.register('foo', {
     // ERROR: Can not find context to bind event
     useEventListener(el, 'click', (e) => {
       console.log('Element clicked');
+    });
+  },
+});
+```
+
+## Real World Example
+
+If you're only implementing a copy button, there's no need to use WebDirective. Below is a real-world example showing
+how to use WebDirective to make multiple widgets work well in dynamic layouts.
+
+Imagine a repeatable table where each row contains several editable fields, and each field has features like a character
+counter and a date picker that rely on different external libraries. To properly manage instance creation and
+destruction, we can use WebDirective to implement these features and ensure they continue to work when rows are
+dynamically added or removed.
+
+```html
+
+<table>
+  <tr>
+    <td>
+      <input type="text" w-text-count maxlength="255" />
+    </td>
+    <td>
+      <input type="text" w-calendar='{"tz":"UTC", "enableTime":true }' />
+    </td>
+    <td>
+      <input type="text" w-color='{"popup":true, ...more options }' />
+    </td>
+    <td>
+      <button w-add-more>Add More</button>
+      <button w-delete-self>Delete</button>
+    </td>
+  </tr>
+  ...
+</table>
+```
+
+Below is an example demonstrating how to make this repeatable table work: each row's calendar, color picker, etc., will
+automatically initialize when the HTML is inserted into the page and will be automatically destroyed when the HTML is
+removed. The advantage of WebDirective is that it allows declaring specific behaviors for dynamically changing HTML
+without relying on an MVVM or model-driven framework:
+
+```ts
+import Calendar from 'calendar-lib';
+import ColorPicker from 'color-picker-lib';
+import TextCount from 'text-count-lib';
+import { useEventListener } from 'web-directive';
+
+wd.register('text-count', {
+  mounted(el, binding) {
+    singleton(el, 'text-count', () => new TextCount(el, { max: el.getAttribute('maxlength') }));
+  },
+  updated(el, binding) {
+    const instance = singleton(el, 'text-count');
+    instance?.setOptions({ max: el.getAttribute('maxlength') });
+  },
+  unmounted(el, binding) {
+    const instance = singleton(el, 'text-count', false);
+    instance?.destroy();
+  }
+});
+
+wd.register('calendar', {
+  mounted(el, binding) {
+    const options = JSON.parse(binding.value || '{}');
+    singleton(el, 'calendar', () => new Calendar(el, options));
+  },
+  updated(el, binding) {
+    const instance = singleton(el, 'calendar');
+    const options = JSON.parse(binding.value || '{}');
+    instance?.setOptions(options);
+  },
+  unmounted(el, binding) {
+    const instance = singleton(el, 'calendar', false);
+    instance?.destroy();
+  },
+});
+
+wd.register('color', {
+  mounted(el, binding) {
+    const options = JSON.parse(binding.value || '{}');
+    singleton(el, 'color-picker', () => new ColorPicker(el, options));
+  },
+  updated(el, binding) {
+    const instance = singleton(el, 'color-picker');
+    const options = JSON.parse(binding.value || '{}');
+    instance?.setOptions(options);
+  },
+  unmounted(el, binding) {
+    const instance = singleton(el, 'color-picker', false);
+    instance?.destroy();
+  },
+});
+
+wd.register('add-more', {
+  mounted(el, binding) {
+    useEventListener('click', () => {
+      const newRow = document.createElement('tr');
+      newRow.innerHTML = '/* Your line template */';
+      el.closest('table').appendChild(newRow);
+    });
+  },
+});
+
+wd.register('delete-self', {
+  mounted(el, binding) {
+    useEventListener('click', () => {
+      const row = el.closest('tr');
+      row.parentNode.removeChild(row);
     });
   },
 });
